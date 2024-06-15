@@ -1,0 +1,84 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Upload and Details</title>
+    <link rel="stylesheet" href="caption.css">
+</head>
+<body>
+    <div class="container">
+        <div class="output-container" id="outputContainer">
+            <!-- Output items will be dynamically added here -->
+        </div>
+        <form onsubmit="handleSubmit(event)">
+            <div class="input-box">
+                <label for="imageUpload" class="upload-label">
+                    <img id="uploadIcon" src="Images/upload.png" alt="Upload">
+                </label>
+                <input type="file" id="imageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)" multiple>
+                <button type="submit">Submit</button>
+            </div>
+        </form>
+    </div>
+    <script>
+        function handleImageUpload(event) {
+            const files = event.target.files;
+            const file = files[0];
+            const reader = new FileReader();
+
+            reader.onload = function() {
+                const arrayBuffer = reader.result;
+
+                // Create a WebSocket connection
+                const socket = new WebSocket(`ws://${window.location.host}/ws/socket-server/`);
+
+                // Send the image data over the WebSocket connection
+                socket.onopen = function() {
+                    socket.send(arrayBuffer);
+                };
+
+                // Handle incoming messages from the WebSocket connection
+                socket.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+
+                    // Clear the output container
+                    const outputContainer = document.getElementById('outputContainer');
+                    outputContainer.innerHTML = '';
+
+                    // Create a new div for the uploaded image
+                    const imageDiv = document.createElement('div');
+                    imageDiv.classList.add('image-block');
+
+                    // Create an img element and set its src to the uploaded image's data URL
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.alt = 'Uploaded Image';
+                    imageDiv.appendChild(img);
+
+                    // Create a new div for the output
+                    const outputDiv = document.createElement('div');
+                    outputDiv.classList.add('output-item');
+                    outputDiv.textContent = JSON.stringify(data);
+
+                    // Add the image and output divs to the output container
+                    outputContainer.appendChild(imageDiv);
+                    outputContainer.appendChild(outputDiv);
+                };
+
+                socket.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                };
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function handleSubmit(event) {
+            event.preventDefault();
+            // Perform any additional actions on form submit
+        }
+    </script>
+</body>
+</html>
